@@ -130,7 +130,7 @@
 <div class="shell">
   <div class="tabs">
     <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
-    <button class="tab" onclick="switchTab('chat',this)">💬 AI Chat <span id="api-pill" style="font-size:9px;padding:1px 6px;border-radius:99px;background:var(--info-bg);color:var(--info);margin-left:2px;">Gemini API</span></button>
+    <button class="tab" onclick="switchTab('chat',this)">💬 AI Chat <span id="api-pill" style="font-size:9px;padding:1px 6px;border-radius:99px;background:var(--info-bg);color:var(--info);margin-left:2px;">Groq API</span></button>
     <button class="tab" onclick="switchTab('workflow',this)">🔗 n8n Workflow</button>
     <button class="tab" onclick="switchTab('evidence',this)">✅ Evidence</button>
   </div>
@@ -170,8 +170,8 @@
   <!-- CHAT -->
   <div class="panel" id="tab-chat">
     <div class="hbar">
-      <div><div class="hbar-title">AI chat assistant</div><div class="hbar-sub" id="api-status-text">NLP → XGBoost → RAG → Gemini API (Google)</div></div>
-      <span class="hbar-badge badge-api" id="api-badge">● Gemini API</span>
+      <div><div class="hbar-title">AI chat assistant</div><div class="hbar-sub" id="api-status-text">NLP → XGBoost → RAG → Groq LLM (Llama 3.1)</div></div>
+      <span class="hbar-badge badge-api" id="api-badge">● Groq API</span>
     </div>
     <div class="chips">
       <div class="chip" onclick="chip('How much did I spend on food last month?')">Food spend last month</div>
@@ -189,7 +189,7 @@
         </div>
       </div>
     </div>
-    <div class="api-note">ℹ Powered by Google Gemini API (free · no credit card) via Cloudflare Worker proxy · RAG-grounded on Jordan's transaction dataset</div>
+    <div class="api-note">ℹ Powered by Groq API (free · Llama 3.1) via Cloudflare Worker proxy · RAG-grounded on Jordan's transaction dataset</div>
     <div class="input-row">
       <textarea id="inp" rows="1" placeholder="Ask about your money..."></textarea>
       <button class="sbtn" id="sbtn" onclick="sendMsg()" aria-label="Send">↑</button>
@@ -280,7 +280,7 @@
 </div>
 
 <div class="footer">
-  CommBank AI — Personal Financial Assistant Prototype · ISYS3443 Assessment 3 · Google Gemini API · XGBoost + LSTM + NLP + RAG<br>
+  CommBank AI — Personal Financial Assistant Prototype · ISYS3443 Assessment 3 · Groq API (Llama 3.1) · XGBoost + LSTM + NLP + RAG<br>
   Mock data only — no real customer data used.
 </div>
 
@@ -288,7 +288,7 @@
 // ─── STEP 3: After deploying Cloudflare Worker, paste its URL here ────────────
 const PROXY_URL = 'https://delicate-salad-6863.surajdoshi123.workers.dev';
 // ─────────────────────────────────────────────────────────────────────────────
-// Uses Google Gemini 2.0 Flash (free, no credit card) via Cloudflare Worker proxy
+// Uses Groq API (Llama 3.1 8b Instant, free) via Cloudflare Worker proxy
 
 function switchTab(id, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -354,9 +354,9 @@ async function sendMsg() {
     const fmt = reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
     addMsg('assistant', fmt);
     history.push({ role: 'assistant', content: reply });
-    document.getElementById('api-status-text').textContent = 'Gemini API · response received ✓ · RAG-grounded';
+    document.getElementById('api-status-text').textContent = 'Groq API · response received ✓ · RAG-grounded';
     const b = document.getElementById('api-badge');
-    b.textContent = '✓ Gemini API live'; b.style.background = '#dcfce7'; b.style.color = '#166534';
+    b.textContent = '✓ Groq API live'; b.style.background = '#dcfce7'; b.style.color = '#166534';
   } catch(e) {
     document.getElementById('typing-el')?.remove();
     addMsg('assistant', 'API proxy not configured yet. Add your Cloudflare Worker URL to PROXY_URL in index.html — see worker.js for setup. The Dashboard and n8n Workflow tabs work without the API.');    const b = document.getElementById('api-badge');
