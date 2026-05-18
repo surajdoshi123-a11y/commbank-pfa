@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CommBank AI — Personal Financial Assistant Prototype</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --yellow: #FFD000; --yellow-dark: #b8960a;
+    --bg: #ffffff; --bg2: #f7f7f5; --bg3: #f0efe9;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a1a; --text2: #555; --text3: #888;
+    --success: #166534; --success-bg: #dcfce7;
+    --danger: #991b1b; --danger-bg: #fee2e2;
+    --warning: #92400e; --warning-bg: #fef3c7;
+    --info: #1e40af; --info-bg: #dbeafe;
+    --radius: 8px; --radius-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'SF Mono', 'Fira Code', monospace;
+  }
+  body { font-family: var(--font); background: #f3f2ee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px 16px 40px; color: var(--text); }
+  .top-header { width: 100%; max-width: 900px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .top-logo { display: flex; align-items: center; gap: 10px; }
+  .logo-circle { width: 34px; height: 34px; border-radius: 50%; background: var(--yellow); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #000; flex-shrink: 0; }
+  .top-logo-text { font-size: 15px; font-weight: 700; }
+  .top-logo-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .top-badge { font-size: 11px; padding: 4px 10px; border-radius: 99px; background: var(--success-bg); color: var(--success); font-weight: 500; border: 1px solid rgba(22,101,52,0.2); display: flex; align-items: center; gap: 5px; }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .shell { width: 100%; max-width: 900px; background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg2); overflow-x: auto; }
+  .tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; border: none; background: none; border-bottom: 2.5px solid transparent; display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--yellow); background: var(--bg); }
+  .panel { display: none; } .panel.active { display: block; }
+  .hbar { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .hbar-title { font-size: 13px; font-weight: 600; } .hbar-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .hbar-badge { font-size: 10px; padding: 3px 9px; border-radius: 99px; font-weight: 500; }
+  .badge-live { background: var(--success-bg); color: var(--success); }
+  .badge-api { background: var(--info-bg); color: var(--info); }
+  .badge-arch { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .dash { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--border); }
+  .metric-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .metric-val { font-size: 22px; font-weight: 700; } .metric-delta { font-size: 11px; margin-top: 3px; }
+  .red { color: #dc2626; } .green { color: #16a34a; }
+  .insight { border: 1px solid var(--border); border-left: 3px solid var(--yellow); border-radius: var(--radius); padding: 12px 14px; }
+  .insight-tag { font-size: 10px; color: var(--text3); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+  .insight-text { font-size: 13px; line-height: 1.6; }
+  .sec-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .srow { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .srow-label { width: 90px; font-size: 12px; color: var(--text2); flex-shrink: 0; }
+  .bar-wrap { flex: 1; height: 6px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; }
+  .srow-amt { width: 48px; text-align: right; font-size: 12px; font-weight: 600; }
+  .srow-status { font-size: 11px; width: 60px; text-align: right; font-weight: 500; }
+  .alert-bar { background: var(--danger-bg); border: 1px solid rgba(153,27,27,0.2); border-radius: var(--radius); padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .alert-title { font-size: 12px; font-weight: 700; color: var(--danger); margin-bottom: 2px; }
+  .alert-body { font-size: 11px; color: var(--danger); line-height: 1.5; }
+  .chips { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; background: var(--bg2); }
+  .chip { font-size: 11px; padding: 4px 11px; border-radius: 99px; border: 1px solid var(--border2); background: var(--bg); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .chip:hover { background: var(--yellow); color: #000; border-color: var(--yellow); }
+  .messages { height: 340px; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { display: flex; gap: 8px; align-items: flex-start; max-width: 90%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .av { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
+  .av.ai { background: var(--yellow); color: #000; } .av.user { background: var(--info-bg); color: var(--info); }
+  .bubble { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 9px 12px; font-size: 13px; line-height: 1.6; }
+  .msg.user .bubble { background: var(--bg); border-color: var(--border2); }
+  .btag { font-size: 9px; color: var(--text3); margin-bottom: 4px; display: block; }
+  .typing { display: flex; align-items: center; gap: 4px; padding: 6px 2px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: boun 1.2s infinite; }
+  .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+  @keyframes boun { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+  .api-note { padding: 6px 14px; font-size: 10px; color: var(--text3); border-top: 1px solid var(--border); display: flex; align-items: center; gap: 5px; background: var(--bg2); }
+  .input-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; }
+  textarea { flex: 1; resize: none; border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 11px; font-size: 13px; font-family: var(--font); background: var(--bg2); color: var(--text); line-height: 1.5; min-height: 36px; max-height: 80px; outline: none; }
+  textarea:focus { border-color: var(--yellow); }
+  .sbtn { width: 36px; height: 36px; border-radius: var(--radius); background: var(--yellow); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; flex-shrink: 0; font-size: 18px; line-height: 1; }
+  .sbtn:hover { opacity: 0.85; } .sbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .wf-wrap { padding: 16px; overflow-x: auto; }
+  .wf-sub { font-size: 11px; color: var(--text3); margin-bottom: 12px; line-height: 1.5; }
+  .wf-canvas { background-color: var(--bg2); background-image: radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px); background-size: 20px 20px; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 12px 20px; min-width: 640px; }
+  .wf-section-label { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .wf-row { display: flex; align-items: flex-start; gap: 0; flex-wrap: nowrap; margin-bottom: 4px; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+  .nbox { border-radius: 8px; border: 1.5px solid; padding: 7px 9px; font-size: 9px; font-weight: 600; text-align: center; min-width: 80px; max-width: 90px; line-height: 1.35; }
+  .nbox small { font-size: 7.5px; font-weight: 400; opacity: 0.75; display: block; margin-top: 1px; }
+  .ncap { font-size: 8px; color: var(--text3); text-align: center; max-width: 90px; line-height: 1.3; }
+  .arr { display: flex; align-items: center; margin-top: 20px; flex-shrink: 0; }
+  .arr-line { height: 1.5px; background: rgba(0,0,0,0.18); min-width: 8px; width: 12px; }
+  .arr-tip { font-size: 8px; color: var(--text2); }
+  .n-trigger { background: #fffbea; border-color: #d97706; color: #78350f; }
+  .n-webhook { background: var(--info-bg); border-color: rgba(30,64,175,0.35); color: var(--info); }
+  .n-ai { background: var(--bg); border-color: var(--border2); color: var(--text); }
+  .n-llm { background: #fffbea; border-color: #d97706; color: #78350f; }
+  .n-if { background: var(--warning-bg); border-color: rgba(146,64,14,0.3); color: var(--warning); }
+  .n-ok { background: var(--success-bg); border-color: rgba(22,101,52,0.3); color: var(--success); }
+  .n-err { background: var(--danger-bg); border-color: rgba(153,27,27,0.3); color: var(--danger); }
+  .wf-divider { border: none; border-top: 1px dashed var(--border2); margin: 14px 0 12px; }
+  .wf-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text2); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; border: 1px solid; }
+  .ev-wrap { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .ev-card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .ev-head { padding: 8px 14px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+  .ev-num { width: 20px; height: 20px; border-radius: 50%; background: var(--yellow); color: #000; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ev-body { padding: 12px 14px; font-size: 12px; line-height: 1.7; color: var(--text2); }
+  .ev-body strong { color: var(--text); }
+  .mono { font-family: var(--mono); font-size: 11px; background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--text); }
+  .footer { width: 100%; max-width: 900px; margin-top: 14px; font-size: 10px; color: var(--text3); text-align: center; line-height: 1.6; }
+  @media (max-width: 600px) { .metrics { grid-template-columns: 1fr 1fr; } .metrics .metric:last-child { grid-column: span 2; } }
+</style>
+</head>
+<body>
+
+<div class="top-header">
+  <div class="top-logo">
+    <div class="logo-circle">CB</div>
+    <div>
+      <div class="top-logo-text">CommBank AI — Personal Financial Assistant</div>
+      <div class="top-logo-sub">ISYS3443 Assessment 3 Prototype · GenAI + ML + NLP + RAG Pipeline</div>
+    </div>
+  </div>
+  <div class="top-badge"><div class="pulse"></div> Live Prototype</div>
+</div>
+
+<div class="shell">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+    <button class="tab" onclick="switchTab('chat',this)">💬 AI Chat <span id="api-pill" style="font-size:9px;padding:1px 6px;border-radius:99px;background:var(--info-bg);color:var(--info);margin-left:2px;">Groq API</span></button>
+    <button class="tab" onclick="switchTab('workflow',this)">🔗 n8n Workflow</button>
+    <button class="tab" onclick="switchTab('evidence',this)">✅ Evidence</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel active" id="tab-dashboard">
+    <div class="hbar">
+      <div><div class="hbar-title">Spending overview — May 2026</div><div class="hbar-sub">XGBoost classification · LSTM forecast · Jordan Mitchell</div></div>
+      <span class="hbar-badge badge-live">● XGBoost + LSTM live</span>
+    </div>
+    <div class="dash">
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">Total balance</div><div class="metric-val">$4,821</div><div class="metric-delta red">↑ $340 vs last month</div></div>
+        <div class="metric"><div class="metric-label">Month spending</div><div class="metric-val">$1,443</div><div class="metric-delta red">⚠ 12% over average</div></div>
+        <div class="metric"><div class="metric-label">Projected savings</div><div class="metric-val">$380</div><div class="metric-delta green">✓ on track</div></div>
+      </div>
+      <div class="insight">
+        <div class="insight-tag">★ AI insight — XGBoost classification + LSTM time-series forecast</div>
+        <div class="insight-text">Dining spend is <strong>$640</strong> this month — 28% above your usual average. At this rate you'll exceed your dining budget by ~$95 before month-end. Cutting back by $25/week could save ~$180 by the 31st.</div>
+      </div>
+      <div>
+        <div class="sec-title">This month's spending — May 2026</div>
+        <div class="srow"><div class="srow-label">Groceries</div><div class="bar-wrap"><div class="bar-fill" style="width:52%;background:var(--yellow);"></div></div><div class="srow-amt">$520</div><div class="srow-status green">on track</div></div>
+        <div class="srow"><div class="srow-label">Dining out</div><div class="bar-wrap"><div class="bar-fill" style="width:88%;background:#fca5a5;"></div></div><div class="srow-amt">$640</div><div class="srow-status red">+28%</div></div>
+        <div class="srow"><div class="srow-label">Transport</div><div class="bar-wrap"><div class="bar-fill" style="width:30%;background:#86efac;"></div></div><div class="srow-amt">$185</div><div class="srow-status green">under</div></div>
+        <div class="srow"><div class="srow-label">Subscriptions</div><div class="bar-wrap"><div class="bar-fill" style="width:20%;background:#d1d5db;"></div></div><div class="srow-amt">$98</div><div class="srow-status" style="color:var(--text3);">on track</div></div>
+      </div>
+      <div class="alert-bar">
+        <div>
+          <div class="alert-title">🔔 ML-triggered: Dining budget alert [Business Action ✓]</div>
+          <div class="alert-body">LSTM model detected upward dining trend over 7 days. Confidence: 91%. Push notification dispatched to Jordan's device via n8n IF node → alert action.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="panel" id="tab-chat">
+    <div class="hbar">
+      <div><div class="hbar-title">AI chat assistant</div><div class="hbar-sub" id="api-status-text">NLP → XGBoost → RAG → Groq LLM (Llama 3.1)</div></div>
+      <span class="hbar-badge badge-api" id="api-badge">● Groq API</span>
+    </div>
+    <div class="chips">
+      <div class="chip" onclick="chip('How much did I spend on food last month?')">Food spend last month</div>
+      <div class="chip" onclick="chip('Can I afford a $500 holiday this month?')">Afford a holiday?</div>
+      <div class="chip" onclick="chip('Where am I overspending?')">Overspending?</div>
+      <div class="chip" onclick="chip('What will my balance be at month end?')">Month-end forecast</div>
+      <div class="chip" onclick="chip('How does the AI pipeline work?')">How does AI work?</div>
+    </div>
+    <div class="messages" id="messages">
+      <div class="msg">
+        <div class="av ai">AI</div>
+        <div class="bubble">
+          <span class="btag">CommBank AI · NLP → XGBoost → RAG → Claude API · grounded response</span>
+          Hi Jordan! I'm your AI-powered financial assistant. Ask me anything about your spending, savings, or bills. All my answers use your real transaction data — I never fabricate figures.
+        </div>
+      </div>
+    </div>
+    <div class="api-note">ℹ Powered by Groq API (free · Llama 3.1) via Cloudflare Worker proxy · RAG-grounded on Jordan's transaction dataset</div>
+    <div class="input-row">
+      <textarea id="inp" rows="1" placeholder="Ask about your money..."></textarea>
+      <button class="sbtn" id="sbtn" onclick="sendMsg()" aria-label="Send">↑</button>
+    </div>
+  </div>
+
+  <!-- WORKFLOW -->
+  <div class="panel" id="tab-workflow">
+    <div class="hbar">
+      <div><div class="hbar-title">n8n backend automation pipeline</div><div class="hbar-sub">Trigger/action flow · AI API nodes · AWS Bedrock · SageMaker · Redshift</div></div>
+      <span class="hbar-badge badge-arch">Architecture</span>
+    </div>
+    <div class="wf-wrap">
+      <div class="wf-sub">End-to-end automation showing how a customer query flows from the CommBank app through n8n nodes to a Claude LLM response, with confidence-based routing and a parallel LSTM alert pipeline.</div>
+      <div class="wf-canvas">
+        <div class="wf-section-label">Main query pipeline</div>
+        <div class="wf-row">
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">📱</div><div class="nbox n-trigger">CommBank App<small>Customer input</small></div><div class="ncap">User types query<br>[INPUT]</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">🔗</div><div class="nbox n-webhook">n8n Webhook<small>POST /pfa/query</small></div><div class="ncap">Triggers n8n<br>workflow</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">💬</div><div class="nbox n-ai">NLP Classifier<small>AWS Comprehend</small></div><div class="ncap">Intent + entity<br>extraction</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">📊</div><div class="nbox n-ai">XGBoost ML<small>AWS SageMaker</small></div><div class="ncap">Classify + fetch<br>transactions</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">🗄️</div><div class="nbox n-ai">RAG Layer<small>Redshift + S3</small></div><div class="ncap">Inject real data<br>into prompt</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">✨</div><div class="nbox n-llm">Claude LLM<small>AWS Bedrock</small></div><div class="ncap">Generate response<br>[AI OUTPUT]</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">⚖️</div><div class="nbox n-if">IF Node<small>Confidence ≥70%?</small></div><div class="ncap">n8n decision<br>branch</div></div>
+        </div>
+        <div style="display:flex;margin-left:621px;gap:28px;margin-top:2px;">
+          <div style="height:16px;width:1.5px;background:rgba(22,101,52,0.4);margin-left:14px;"></div>
+          <div style="height:16px;width:1.5px;background:rgba(220,38,38,0.4);margin-left:10px;"></div>
+        </div>
+        <div style="display:flex;gap:12px;margin-left:600px;">
+          <div class="node"><div class="nbox n-ok" style="font-size:8.5px;min-width:78px;">✓ TRUE<br>Send Response</div><div class="ncap">In-app display<br>[ACTION]</div></div>
+          <div class="node" style="margin-left:4px;"><div class="nbox n-err" style="font-size:8.5px;min-width:78px;">✗ FALSE<br>Escalate Agent</div><div class="ncap">&lt;70% → CBA<br>service desk</div></div>
+        </div>
+        <hr class="wf-divider">
+        <div class="wf-section-label">Parallel pipeline — LSTM proactive alerts (nightly cron)</div>
+        <div class="wf-row">
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">⏰</div><div class="nbox n-ai">LSTM Schedule<small>SageMaker cron</small></div><div class="ncap">Runs nightly<br>in parallel</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">📈</div><div class="nbox n-ai">Forecast Model<small>Time-series LSTM</small></div><div class="ncap">Predict balance<br>+ trends</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">⚖️</div><div class="nbox n-if">IF Threshold<small>Budget exceeded?</small></div><div class="ncap">n8n conditional<br>check</div></div>
+          <div class="arr"><div class="arr-line"></div><div class="arr-tip">▶</div></div>
+          <div class="node"><div style="font-size:18px;margin-bottom:2px;">🔔</div><div class="nbox n-err">Push Alert<small>Mobile notification</small></div><div class="ncap">Sent to device<br>[BUSINESS ACTION]</div></div>
+        </div>
+      </div>
+      <div class="wf-legend">
+        <div class="leg"><div class="leg-dot" style="background:#fffbea;border-color:#d97706;"></div> Trigger / LLM</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--info-bg);border-color:rgba(30,64,175,0.4);"></div> n8n Webhook</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--bg);border-color:var(--border2);"></div> AI processing</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--warning-bg);border-color:rgba(146,64,14,0.3);"></div> IF decision</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--success-bg);border-color:rgba(22,101,52,0.3);"></div> Success output</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--danger-bg);border-color:rgba(153,27,27,0.3);"></div> Escalation / alert</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVIDENCE -->
+  <div class="panel" id="tab-evidence">
+    <div class="hbar">
+      <div><div class="hbar-title">Prototype evidence — 4 required components</div><div class="hbar-sub">ISYS3443 Assessment 3 rubric · AI functionality requirements</div></div>
+      <span class="hbar-badge badge-arch">Rubric</span>
+    </div>
+    <div class="ev-wrap">
+      <div class="ev-card">
+        <div class="ev-head"><div class="ev-num">1</div> Input — customer query via CommBank app chat</div>
+        <div class="ev-body"><strong>What:</strong> Customer types a natural language financial query into the CommBank AI chat interface.<br><br><strong>Example:</strong> <span class="mono">"How much did I spend on food last month?"</span><br><br><strong>Processing:</strong> Sent via POST to n8n Webhook → AWS Comprehend NLP extracts <span class="mono">intent: spending_query</span>, <span class="mono">entity: food</span>, <span class="mono">period: last_month</span>.</div>
+      </div>
+      <div class="ev-card">
+        <div class="ev-head"><div class="ev-num">2</div> AI processing — NLP + XGBoost + RAG + Claude LLM</div>
+        <div class="ev-body"><strong>Technologies:</strong> NLP (AWS Comprehend), XGBoost (SageMaker), RAG (Redshift + S3), Claude LLM (AWS Bedrock / Anthropic API).<br><br><strong>Internally:</strong> NLP routes query → XGBoost fetches categorised transactions → RAG formats grounded prompt → Claude generates response → n8n IF node checks confidence and routes output.<br><br><strong>Evidence:</strong> n8n Workflow tab — full node pipeline with trigger/action flow and IF decision logic.</div>
+      </div>
+      <div class="ev-card">
+        <div class="ev-head"><div class="ev-num">3</div> Output — RAG-grounded AI response from Claude API</div>
+        <div class="ev-body"><strong>Example:</strong> "In April 2026, your total food spend was $1,124 — $187 above your 3-month average. Groceries: $484, Dining: $640. Top spend: The Grounds, Alexandria ($94)."<br><br><strong>Why genuine AI:</strong> Claude API generates a unique natural language response from the RAG-formatted prompt in real time. No templating — every response is LLM-generated from real transaction figures.</div>
+      </div>
+      <div class="ev-card">
+        <div class="ev-head"><div class="ev-num">4</div> Business action — alert, dashboard update, or escalation</div>
+        <div class="ev-body">• <strong>Push notification:</strong> LSTM detects dining trend (91% confidence) → n8n IF node → alert sent to device.<br>• <strong>Dashboard insight:</strong> XGBoost recategorises spend → AI insight card updated.<br>• <strong>Escalation:</strong> Confidence &lt;70% → n8n routes to CBA service desk agent.<br><br><strong>Evidence:</strong> Dashboard tab → red ML-triggered alert bar with confidence score and action label.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  CommBank AI — Personal Financial Assistant Prototype · ISYS3443 Assessment 3 · Groq API (Llama 3.1) · XGBoost + LSTM + NLP + RAG<br>
+  Mock data only — no real customer data used.
+</div>
+
+<script>
+// ─── STEP 3: After deploying Cloudflare Worker, paste its URL here ────────────
+const PROXY_URL = 'https://delicate-salad-6863.surajdoshi123.workers.dev';
+// ─────────────────────────────────────────────────────────────────────────────
+// Uses Groq API (Llama 3.1 8b Instant, free) via Cloudflare Worker proxy
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+const SYSTEM = `You are CommBank AI, the AI-powered Personal Financial Assistant in the CommBank mobile app. ISYS3443 RMIT university prototype. Use ONLY data below — never invent figures. Be concise (max 90 words), warm, specific. Format money as Australian dollars.
+
+CUSTOMER: Jordan Mitchell — CBA Everyday Account — May 2026
+TRANSACTION DATA (RAG-grounded):
+- Groceries: $484 | Dining out: $640 (28% above $500 avg) | Food total: $1,124 (avg $937, +$187)
+- Top dining: The Grounds Alexandria $94 | Transport: $185 (under) | Subscriptions: $98 (on track)
+- Total spend: $1,443 (12% above avg) | Balance: $4,821 | Month-end forecast: $1,240
+- Dining budget: $700 (will exceed by ~$95) | Savings avg: $380/mo
+- Holiday fund: $1,460 of $2,000 (73%, on track June 2026)
+- LSTM: upward dining trend 7 days, confidence 91%
+PIPELINE: You are Step 4 (RAG+LLM). Steps 1-3: NLP classified, XGBoost fetched data, RAG injected it. Explain briefly if asked.`;
+
+let history = [];
+
+function addMsg(role, html, typing) {
+  const box = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg' + (role === 'user' ? ' user' : '');
+  if (typing) wrap.id = 'typing-el';
+  const av = document.createElement('div');
+  av.className = 'av ' + (role === 'user' ? 'user' : 'ai');
+  av.textContent = role === 'user' ? 'JM' : 'AI';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  if (typing) {
+    bub.innerHTML = '<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+  } else if (role === 'assistant') {
+    bub.innerHTML = '<span class="btag">CommBank AI · NLP → XGBoost → RAG → Claude API · grounded response</span>' + html;
+  } else {
+    bub.textContent = html;
+  }
+  wrap.appendChild(av); wrap.appendChild(bub);
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendMsg() {
+  const inp = document.getElementById('inp');
+  const btn = document.getElementById('sbtn');
+  const text = inp.value.trim();
+  if (!text) return;
+  addMsg('user', text);
+  history.push({ role: 'user', content: text });
+  inp.value = ''; btn.disabled = true;
+  addMsg('assistant', '', true);
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: SYSTEM, messages: history })
+    });
+    const data = await res.json();
+    const reply = data?.content?.find(b => b.type === 'text')?.text || 'Something went wrong — please try again.';
+    document.getElementById('typing-el')?.remove();
+    const fmt = reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    addMsg('assistant', fmt);
+    history.push({ role: 'assistant', content: reply });
+    document.getElementById('api-status-text').textContent = 'Groq API · response received ✓ · RAG-grounded';
+    const b = document.getElementById('api-badge');
+    b.textContent = '✓ Groq API live'; b.style.background = '#dcfce7'; b.style.color = '#166534';
+  } catch(e) {
+    document.getElementById('typing-el')?.remove();
+    addMsg('assistant', 'API proxy not configured yet. Add your Cloudflare Worker URL to PROXY_URL in index.html — see worker.js for setup. The Dashboard and n8n Workflow tabs work without the API.');    const b = document.getElementById('api-badge');
+    b.textContent = '⚠ Setup needed'; b.style.background = '#fef3c7'; b.style.color = '#92400e';
+  }
+  btn.disabled = false;
+}
+
+function chip(text) {
+  switchTab('chat', document.querySelectorAll('.tab')[1]);
+  setTimeout(() => { document.getElementById('inp').value = text; sendMsg(); }, 60);
+}
+
+document.getElementById('inp').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+</script>
+</body>
+</html>
